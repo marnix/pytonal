@@ -9,6 +9,13 @@ def test_interval_addition_subtraction():
     assert Int.fifth - Int.fifth == Int.unison
 
 
+def test_named_intervals():
+    assert Int.unison == Int(min2=0, aug1=0)
+    assert Int.fifth == Int(min2=4, aug1=3)
+    assert Int.octave == Int(min2=7, aug1=5)
+    assert Int.sharp == Int(min2=0, aug1=1)
+
+
 def test_nth():
     assert Int.nth(1) == Int.unison
     assert Int.nth(5) == Int.fifth
@@ -29,12 +36,12 @@ def test_invert():
 
 
 def test_diminished():
-    assert Int.nth(3).diminished() == Int(2, 0)
-    assert Int.nth(3).diminished().inverted() == Int(-2, 0)
+    assert Int.nth(3).diminished() == Int(min2=2, aug1=0)
+    assert Int.nth(3).diminished().inverted() == Int(min2=-2, aug1=0)
 
 
 def test_augmented():
-    assert Int.nth(4).augmented(n=2) == Int(3, 4)
+    assert Int.nth(4).augmented(n=2) == Int(min2=3, aug1=4)
     assert Int.nth(4).augmented(n=2) \
         == Int.nth(6).augmented() - Int.nth(3).minor()
 

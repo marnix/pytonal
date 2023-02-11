@@ -13,7 +13,7 @@ class Int:
     the number of augmented firsts (sharps, e.g. B to B#)
     """
 
-    def __init__(self, min2, aug1):
+    def __init__(self, *, min2, aug1):
         self.min2 = min2
         self.aug1 = aug1
 
@@ -24,22 +24,22 @@ class Int:
         return NotImplemented
 
     def __add__(self, other):
-        return Int(self.min2 + other.min2, self.aug1 + other.aug1)
+        return Int(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1)
 
     def __neg__(self):
-        return Int(-self.min2, -self.aug1)
+        return Int(min2=-self.min2, aug1=-self.aug1)
 
     def __sub__(self, other):
         return self + (-other)
 
     def __repr__(self):
-        return f'Int({self.min2}, {self.aug1})'
+        return f'Int(min2={self.min2}, aug1={self.aug1})'
 
     @staticmethod
     def nth(n):
         """The perfect or major `n`th interval."""
         m = n-1
-        return Int(m, m - (m+4) // 7 - m // 7)
+        return Int(min2=m, aug1=m - (m+4) // 7 - m // 7)
 
     def inverted(self):
         return -self
@@ -58,7 +58,7 @@ class Int:
 
     def augmented(self, *, n=1):
         """..."""
-        return self + Int(0, n+1 if self.fifthsModOctave() < -1 else n)
+        return self + Int(min2=0, aug1=n+1 if self.fifthsModOctave() < -1 else n)
 
     def minor(self):
         """The minor version of this interval"""
@@ -67,10 +67,10 @@ class Int:
 
     def diminished(self, *, n=1):
         """..."""
-        return self - Int(0, n+1 if 1 < self.fifthsModOctave() else n)
+        return self - Int(min2=0, aug1=n+1 if 1 < self.fifthsModOctave() else n)
 
 
-Int.unison = Int(0, 0)
-Int.fifth = Int(4, 3)
-Int.octave = Int(7, 5)
-Int.sharp = Int(0, 1)
+Int.unison = Int.nth(1)
+Int.fifth = Int.nth(5)
+Int.octave = Int.nth(8)
+Int.sharp = Int(min2=0, aug1=1)
