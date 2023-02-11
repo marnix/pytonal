@@ -22,6 +22,18 @@ def test_nth():
     assert Int.nth(8) == Int.octave
 
 
+def test_perfect():
+    assert Int.nth(5).perfect() == Int.fifth
+    with pytest.raises(AssertionError):
+        Int.nth(3).perfect()
+
+
+def test_major():
+    assert Int.nth(3).major() == Int.nth(3)
+    with pytest.raises(AssertionError):
+        Int.nth(4).major()
+
+
 def test_minor():
     assert Int.nth(3).minor() + Int.nth(3) == Int.fifth
     with pytest.raises(AssertionError):
@@ -33,6 +45,7 @@ def test_invert():
         assert not Int.nth(n).isInverted(), f"n={n}"
         assert Int.nth(n).inverted().isInverted(), f"n={n}"
         assert not Int.nth(n).inverted().inverted().isInverted(), f"n={n}"
+    assert not Int(min2=1, aug1=-1).isInverted()
 
 
 def test_diminished():

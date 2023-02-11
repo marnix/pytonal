@@ -51,6 +51,11 @@ class Int:
         """The number of fifths in this interval (modulo octaves)"""
         return -5 * self.min2 + 7 * self.aug1
 
+    def perfect(self):
+        """This interval itself"""
+        assert -1 <= self.fifthsModOctave() <= 1
+        return self
+
     def major(self):
         """This interval itself"""
         assert 2 <= self.fifthsModOctave() <= 5
