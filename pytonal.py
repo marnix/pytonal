@@ -26,11 +26,17 @@ class Int:
     def __add__(self, other):
         return Int(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1)
 
-    def __neg__(self):
-        return Int(min2=-self.min2, aug1=-self.aug1)
-
     def __sub__(self, other):
         return self + (-other)
+
+    def __neg__(self):
+        return self * -1
+
+    def __mul__(self, other):
+        assert other % 1 == 0
+        return Int(min2=other*self.min2, aug1=other*self.aug1)
+
+    __rmul__ = __mul__
 
     def __repr__(self):
         return f'Int(min2={self.min2}, aug1={self.aug1})'

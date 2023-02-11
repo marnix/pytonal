@@ -9,6 +9,10 @@ def test_interval_addition_subtraction():
     assert Int.fifth - Int.fifth == Int.unison
 
 
+def test_interval_multiplication():
+    assert Int.nth(11) * 3 == Int.nth(11) + 2 * Int.nth(11)
+
+
 def test_named_intervals():
     assert Int.unison == Int(min2=0, aug1=0)
     assert Int.fifth == Int(min2=4, aug1=3)
