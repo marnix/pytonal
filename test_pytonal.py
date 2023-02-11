@@ -61,6 +61,7 @@ def test_augmented():
     assert Int.nth(4).augmented(n=2) == Int(min2=3, aug1=4)
     assert Int.nth(4).augmented(n=2) \
         == Int.nth(6).augmented() - Int.nth(3).minor()
+    assert Int.unison.augmented() == Int.sharp
 
 
 def test_diminished_augmented():
