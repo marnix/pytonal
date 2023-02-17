@@ -18,6 +18,7 @@ def test_named_intervals():
     assert Int.fifth == Int(min2=4, aug1=3)
     assert Int.octave == Int(min2=7, aug1=5)
     assert Int.sharp == Int(min2=0, aug1=1)
+    assert Int.pythagorean_comma == Int.sharp - Int.nth(2).minor()
 
 
 def test_nth():
@@ -86,6 +87,24 @@ def test_augmented_diminished():
             == nth.augmented().inverted(), f"n={n}"
         assert nthInv.inverted().diminished() \
             == nthInv.augmented().inverted(), f"n={n}, inverted"
+
+
+def test_mod8():
+    assert Int(min2=0, aug1=0).mod8() == Int(min2=7, aug1=5).mod8()
+    assert Int(min2=0, aug1=0).mod8() != Int(min2=7, aug1=0).mod8()
+    assert Int.nth(9).mod8() == Int.nth(7).minor().inverted().mod8()
+    assert Int.nth(5).mod8() == Int.nth(4).inverted().mod8()
+
+
+def test_modEnh():
+    assert Int.sharp.modEnh() == Int.nth(2).minor().modEnh()
+
+
+def test_modAcc():
+    assert Int.sharp.modAcc() == Int.unison.diminished(n=9).modAcc()
+    assert Int.sharp.modAcc() == (-Int.sharp).modAcc()
+    assert Int.unison != Int.nth(2)
+    assert Int.unison.augmented() != Int.nth(2).diminished()
 
 
 if __name__ == '__main__':
