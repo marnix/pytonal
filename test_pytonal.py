@@ -24,6 +24,7 @@ def test_nth():
     assert Int.nth(1) == Int.unison
     assert Int.nth(5) == Int.fifth
     assert Int.nth(8) == Int.octave
+    assert Int.nth(9) == Int(min2=8, aug1=6)
 
 
 def test_perfect():
