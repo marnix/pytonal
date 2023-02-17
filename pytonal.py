@@ -44,6 +44,10 @@ class Int:
     @staticmethod
     def nth(n):
         """The perfect or major `n`th interval."""
+        assert n % 1 == 0, f"{n} must be integer"
+        assert n != 0
+        if n < 0:
+            return -Int.nth(-n)
         m = n-1
         return Int(min2=m, aug1=m - (m+4) // 7 - m // 7)
 
