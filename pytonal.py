@@ -112,17 +112,22 @@ class Int:
 
     def mod8(self):
         """This interval modulo octaves"""
-        return self.modInterval(Int.octave)
+        return self.modInterval(Int.octave)  # or self.modEnh(octaveSteps=0, fifthSteps=1)
 
-    def modEnh(self):
-        """This interval modulo enharmonic in 12-tone scale.
-        TODO: Generalize to e.g. 17 and 19-tone scales,
-        and to both 47-note scales."""
-        return self.modInterval(Int.pythagorean_comma)
+    def modEnh(self, octaveSteps=12, fifthSteps=7):
+        """This interval modulo enharmonic in 12-tone scale,
+        or any other given scale.
+        Note that with default arguments,
+        ```
+        assert i.modEnh() == i.modInterval(Int.pythagorean_comma)
+        ```"""
+        # TODO: Default fifthSteps to None, and calculate it
+        # (and fail if it is not unique).
+        return self.modInterval(Int(min2=4*octaveSteps-7*fifthSteps, aug1=3*octaveSteps-5*fifthSteps))
 
     def modAcc(self):
         """This interval modulo accidentals (flats/sharps)"""
-        return self.modInterval(Int.sharp)
+        return self.modInterval(Int.sharp)  # or self.modEnh(octaveSteps=7, fifthSteps=4)
 
 
 Int.unison = Int.nth(1)
