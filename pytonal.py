@@ -29,8 +29,8 @@ class Int:
     def __eq__(self, other):
         """Is this equal to the other interval?"""
         if isinstance(other, Int):
-            assert self.modMin2 == other.modMin2
-            assert self.modAug1 == other.modAug1
+            if not (self.modMin2 == other.modMin2 and self.modAug1 == other.modAug1):
+                return NotImplemented # TODO: Support this case, somehow?
             # is the difference between my (min2,aug1) and the other's
             # a multiple of (modMin2,modAug1)?
             if self.modMin2 == 0 and self.modAug1 == 0:
