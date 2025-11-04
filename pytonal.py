@@ -5,6 +5,9 @@ An experimental module for representing notes etc.,
 to do some music theory.
 """
 
+from typing import ClassVar, TypeVar
+from typing_extensions import Self
+
 
 class Int:
     """
@@ -71,7 +74,7 @@ class Int:
         m = n-1
         return Int(min2=m, aug1=m - (m+4) // 7 - m // 7)
 
-    def inverted(self):
+    def inverted(self) -> 'Int':
         return -self
 
     def isInverted(self):
@@ -128,6 +131,12 @@ class Int:
     def modAcc(self):
         """This interval modulo accidentals (flats/sharps)"""
         return self.modInterval(Int.sharp)  # or self.modEnh(octaveSteps=7, fifthSteps=4)
+
+    unison: ClassVar[Self]
+    fifth: ClassVar[Self]
+    octave: ClassVar[Self]
+    sharp: ClassVar[Self]
+    pythagorean_comma: ClassVar[Self]
 
 
 Int.unison = Int.nth(1)
