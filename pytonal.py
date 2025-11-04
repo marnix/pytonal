@@ -117,15 +117,16 @@ class Int:
         """This interval modulo octaves"""
         return self.modInterval(Int.octave)  # or self.modEnh(octaveSteps=0, fifthSteps=1)
 
-    def modEnh(self, octaveSteps=12, fifthSteps=7):
+    def modEnh(self, octaveSteps=12, fifthSteps=None):
         """This interval modulo enharmonic in 12-tone scale,
         or any other given scale.
         Note that with default arguments,
         ```
         assert i.modEnh() == i.modInterval(Int.pythagorean_comma)
         ```"""
-        # TODO: Default fifthSteps to None, and calculate it
-        # (and fail if it is not unique).
+        if fifthSteps is None:
+            assert octaveSteps == 12, "TODO: Calculate fifthSteps, but fail if ambiguous, e.g. for 47"
+            fifthSteps = 7
         return self.modInterval(Int(min2=4*octaveSteps-7*fifthSteps, aug1=3*octaveSteps-5*fifthSteps))
 
     def modAcc(self):

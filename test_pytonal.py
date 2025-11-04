@@ -101,12 +101,13 @@ def test_modEnh():
     for i in (Int.unison, Int.sharp, Int.fifth.diminished(), Int.octave.inverted()):
         assert i.modEnh() == i.modInterval(Int.pythagorean_comma)
     assert Int.sharp.modEnh() == Int.nth(2).minor().modEnh()
-    # TODO:
-    # assert Int.sharp.modEnh(12) == Int.nth(2).minor().modEnh(12)
+    assert Int.sharp.modEnh(12) == Int.nth(2).minor().modEnh(12)
     assert Int.sharp.modEnh(12, 7) == Int.nth(2).minor().modEnh(12, 7)
-    # TODO:
-    # with pytest.raises(AssertionError):
-    #     Int.sharp.modEnh(47)
+    assert Int.sharp.modEnh(19, 11) == Int.nth(2).diminished().modEnh(19, 11)
+    # TODO
+    # assert Int.sharp.modEnh(19) == Int.nth(2).diminished().modEnh(19)
+    with pytest.raises(AssertionError):
+        Int.sharp.modEnh(47)
     assert (Int.nth(2).minor()*8).modEnh(47, 28) == Int.sharp.modEnh(47, 28)
     assert Int.nth(2).minor().modEnh(47, 27) == (Int.sharp*6).modEnh(47, 27)
 
