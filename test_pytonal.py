@@ -4,16 +4,16 @@ from pytonal import *
 import pytest
 
 
-def test_interval_addition_subtraction():
+def test_interval_addition_subtraction() -> None:
     assert Int.fifth + Int.octave == Int.octave + Int.fifth
     assert Int.fifth - Int.fifth == Int.unison
 
 
-def test_interval_multiplication():
+def test_interval_multiplication() -> None:
     assert Int.nth(11) * 3 == Int.nth(11) + 2 * Int.nth(11)
 
 
-def test_named_intervals():
+def test_named_intervals() -> None:
     assert Int.unison == Int(min2=0, aug1=0)
     assert Int.fifth == Int(min2=4, aug1=3)
     assert Int.octave == Int(min2=7, aug1=5)
@@ -22,7 +22,7 @@ def test_named_intervals():
     assert Int.pythagorean_comma == Int(min2=-1, aug1=1)
 
 
-def test_nth():
+def test_nth() -> None:
     assert Int.nth(1) == Int.unison
     assert Int.nth(5) == Int.fifth
     assert Int.nth(8) == Int.octave
@@ -32,25 +32,25 @@ def test_nth():
     assert Int.nth(-9) == -Int(min2=8, aug1=6)
 
 
-def test_perfect():
+def test_perfect() -> None:
     assert Int.nth(5).perfect() == Int.fifth
     with pytest.raises(AssertionError):
         Int.nth(3).perfect()
 
 
-def test_major():
+def test_major() -> None:
     assert Int.nth(3).major() == Int.nth(3)
     with pytest.raises(AssertionError):
         Int.nth(4).major()
 
 
-def test_minor():
+def test_minor() -> None:
     assert Int.nth(3).minor() + Int.nth(3) == Int.fifth
     with pytest.raises(AssertionError):
         Int.nth(4).minor()
 
 
-def test_invert():
+def test_invert() -> None:
     for n in range(2, 16):
         assert not Int.nth(n).isInverted(), f"n={n}"
         assert Int.nth(n).inverted().isInverted(), f"n={n}"
@@ -58,19 +58,19 @@ def test_invert():
     assert not Int(min2=1, aug1=-1).isInverted()
 
 
-def test_diminished():
+def test_diminished() -> None:
     assert Int.nth(3).diminished() == Int(min2=2, aug1=0)
     assert Int.nth(3).diminished().inverted() == Int(min2=-2, aug1=0)
 
 
-def test_augmented():
+def test_augmented() -> None:
     assert Int.nth(4).augmented(n=2) == Int(min2=3, aug1=4)
     assert Int.nth(4).augmented(n=2) \
         == Int.nth(6).augmented() - Int.nth(3).minor()
     assert Int.unison.augmented() == Int.sharp
 
 
-def test_diminished_augmented():
+def test_diminished_augmented() -> None:
     for n in (2, 3, 6, 7, 9):
         nth = Int.nth(n)
         nthInv = nth.inverted()
@@ -80,7 +80,7 @@ def test_diminished_augmented():
             == nthInv.diminished().inverted(), f"n={n}, inverted"
 
 
-def test_augmented_diminished():
+def test_augmented_diminished() -> None:
     for n in (2, 3, 6, 7, 9):
         nth = Int.nth(n)
         nthInv = nth.inverted()
@@ -90,14 +90,14 @@ def test_augmented_diminished():
             == nthInv.augmented().inverted(), f"n={n}, inverted"
 
 
-def test_mod8():
+def test_mod8() -> None:
     assert Int(min2=0, aug1=0).mod8() == Int(min2=7, aug1=5).mod8()
     assert Int(min2=0, aug1=0).mod8() != Int(min2=7, aug1=0).mod8()
     assert Int.nth(9).mod8() == Int.nth(7).minor().inverted().mod8()
     assert Int.nth(5).mod8() == Int.nth(4).inverted().mod8()
 
 
-def test_modEnh():
+def test_modEnh() -> None:
     for i in (Int.unison, Int.sharp, Int.fifth.diminished(), Int.octave.inverted()):
         assert i.modEnh() == i.modInterval(Int.pythagorean_comma)
     assert Int.sharp.modEnh() == Int.nth(2).minor().modEnh()
@@ -112,7 +112,7 @@ def test_modEnh():
     assert Int.nth(2).minor().modEnh(47, 27) == (Int.sharp*6).modEnh(47, 27)
 
 
-def test_modAcc():
+def test_modAcc() -> None:
     assert Int.sharp.modAcc() == Int.unison.diminished(n=9).modAcc()
     assert Int.sharp.modAcc() == (-Int.sharp).modAcc()
     assert Int.unison != Int.nth(2)
