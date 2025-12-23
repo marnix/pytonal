@@ -5,7 +5,7 @@ An experimental module for representing notes etc.,
 to do some music theory.
 """
 
-from typing import ClassVar, TypeVar
+from typing import ClassVar, TypeVar, Any, Optional
 from typing_extensions import Self
 
 
@@ -20,13 +20,13 @@ class Int:
     or Cb, C, and C# all equal to each other (a 7-tone scale).
     """
 
-    def __init__(self, *, min2, aug1, modMin2=0, modAug1=0):
+    def __init__(self, *, min2: int, aug1: int, modMin2: int = 0, modAug1: int = 0) -> None:
         self.min2 = min2
         self.aug1 = aug1
         self.modMin2 = modMin2
         self.modAug1 = modAug1
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """Is this equal to the other interval?"""
         if isinstance(other, Int):
             if not (self.modMin2 == other.modMin2 and self.modAug1 == other.modAug1):
@@ -42,22 +42,22 @@ class Int:
                     (self.aug1 - other.aug1) * self.modMin2
         return NotImplemented
 
-    def __add__(self, other):
-        return Int(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1)
+    def __add__(self, other: Self) -> Self:
+        return type(self)(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1)
 
-    def __sub__(self, other):
+    def __sub__(self, other: Self) -> Self:
         return self + (-other)
 
-    def __neg__(self):
+    def __neg__(self) -> Self:
         return self * -1
 
-    def __mul__(self, other):
+    def __mul__(self, other: Any) -> Self:
         assert other % 1 == 0, f"{other} must be integer"
-        return Int(min2=other*self.min2, aug1=other*self.aug1)
+        return type(self)(min2=other*self.min2, aug1=other*self.aug1)
 
     __rmul__ = __mul__
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.modMin2 == 0 and self.modAug1 == 0:
             optional = ""
         else:
@@ -65,7 +65,7 @@ class Int:
         return f'Int(min2={self.min2}, aug1={self.aug1}{optional})'
 
     @staticmethod
-    def nth(n):
+    def nth(n: int) -> 'Int':
         """The perfect or major `n`th interval."""
         assert n % 1 == 0, f"{n} must be integer"
         assert n != 0
@@ -74,50 +74,50 @@ class Int:
         m = n-1
         return Int(min2=m, aug1=m - (m+4) // 7 - m // 7)
 
-    def inverted(self) -> 'Int':
+    def inverted(self) -> Self:
         return -self
 
-    def isInverted(self):
+    def isInverted(self) -> bool:
         return self.min2 < 0
 
-    def fifthsModOctave(self):
+    def fifthsModOctave(self) -> int:
         """The number of fifths in this interval (modulo octaves)"""
         return -5 * self.min2 + 7 * self.aug1
 
-    def perfect(self):
+    def perfect(self) -> Self:
         """This interval itself"""
         assert -1 <= self.fifthsModOctave() <= 1
         return self
 
-    def major(self):
+    def major(self) -> Self:
         """This interval itself"""
         assert 2 <= self.fifthsModOctave() <= 5
         return self
 
-    def augmented(self, *, n=1):
+    def augmented(self, *, n: int = 1) -> Self:
         """The (doubly, triply) augmented version of this interval"""
         assert -5 <= self.fifthsModOctave() <= 5
-        return self + Int.sharp * (self.fifthsModOctave() < -1) + n * Int.sharp
+        return self + type(self).sharp * (self.fifthsModOctave() < -1) + n * type(self).sharp
 
-    def minor(self):
+    def minor(self) -> Self:
         """The minor version of this interval"""
         assert 2 <= self.fifthsModOctave() <= 5
-        return self - Int.sharp
+        return self - type(self).sharp
 
-    def diminished(self, *, n=1):
+    def diminished(self, *, n: int = 1) -> Self:
         """The (doubly, triply) diminished version of this interval"""
         assert -5 <= self.fifthsModOctave() <= 5
-        return self - Int.sharp * (self.fifthsModOctave() > 1) - n * Int.sharp
+        return self - type(self).sharp * (self.fifthsModOctave() > 1) - n * type(self).sharp
 
-    def modInterval(self, other):
+    def modInterval(self, other: Self) -> Self:
         assert self.modMin2 == 0 and self.modAug1 == 0, "TODO: lift this restriction"
-        return Int(min2=self.min2, aug1=self.aug1, modMin2=other.min2, modAug1=other.aug1)
+        return type(self)(min2=self.min2, aug1=self.aug1, modMin2=other.min2, modAug1=other.aug1)
 
-    def mod8(self):
+    def mod8(self) -> Self:
         """This interval modulo octaves"""
-        return self.modInterval(Int.octave)  # or self.modEnh(octaveSteps=0, fifthSteps=1)
+        return self.modInterval(type(self).octave)  # or self.modEnh(octaveSteps=0, fifthSteps=1)
 
-    def modEnh(self, octaveSteps=12, fifthSteps=None):
+    def modEnh(self, octaveSteps: int = 12, fifthSteps: Optional[int] = None) -> Self:
         """This interval modulo enharmonic in 12-tone scale,
         or any other given scale.
         Note that with default arguments,
@@ -127,11 +127,11 @@ class Int:
         if fifthSteps is None:
             assert octaveSteps == 12, "TODO: Calculate fifthSteps, but fail if ambiguous, e.g. for 47"
             fifthSteps = 7
-        return self.modInterval(Int(min2=4*octaveSteps-7*fifthSteps, aug1=3*octaveSteps-5*fifthSteps))
+        return self.modInterval(type(self)(min2=4*octaveSteps-7*fifthSteps, aug1=3*octaveSteps-5*fifthSteps))
 
-    def modAcc(self):
+    def modAcc(self) -> Self:
         """This interval modulo accidentals (flats/sharps)"""
-        return self.modInterval(Int.sharp)  # or self.modEnh(octaveSteps=7, fifthSteps=4)
+        return self.modInterval(type(self).sharp)  # or self.modEnh(octaveSteps=7, fifthSteps=4)
 
     unison: ClassVar[Self]
     fifth: ClassVar[Self]
