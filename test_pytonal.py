@@ -119,6 +119,9 @@ def test_modAcc() -> None:
     assert Int.unison.augmented() != Int.nth(2).diminished()
 
 
+def test_repr() -> None:
+    assert repr(Int.sharp.mod8()) == 'pytonal.Int(min2=0, aug1=1, modMin2=7, modAug1=5)'
+
 if __name__ == '__main__':
     import sys
     import pytest

@@ -28,7 +28,7 @@ class Int:
 
     def __eq__(self, other: Any) -> bool:
         """Is this equal to the other interval?"""
-        if isinstance(other, Int):
+        if isinstance(other, type(self)):
             if not (self.modMin2 == other.modMin2 and self.modAug1 == other.modAug1):
                 return NotImplemented # TODO: Support this case, somehow?
             # is the difference between my (min2,aug1) and the other's
@@ -62,17 +62,18 @@ class Int:
             optional = ""
         else:
             optional = f", modMin2={self.modMin2}, modAug1={self.modAug1}"
-        return f'Int(min2={self.min2}, aug1={self.aug1}{optional})'
+        cls = self.__class__
+        return f'{cls.__module__}.{cls.__qualname__}(min2={self.min2}, aug1={self.aug1}{optional})'
 
-    @staticmethod
-    def nth(n: int) -> 'Int':
+    @classmethod
+    def nth(Class, n: int) -> Self:
         """The perfect or major `n`th interval."""
         assert n % 1 == 0, f"{n} must be integer"
         assert n != 0
         if n < 0:
-            return -Int.nth(-n)
+            return -Class.nth(-n)
         m = n-1
-        return Int(min2=m, aug1=m - (m+4) // 7 - m // 7)
+        return Class(min2=m, aug1=m - (m+4) // 7 - m // 7)
 
     def inverted(self) -> Self:
         return -self
