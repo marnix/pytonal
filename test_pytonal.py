@@ -3,6 +3,8 @@
 from pytonal import *
 import pytest
 
+import re
+
 
 def test_interval_addition_subtraction() -> None:
     assert Int.fifth + Int.octave == Int.octave + Int.fifth
@@ -104,9 +106,10 @@ def test_modEnh() -> None:
     assert Int.sharp.modEnh(12) == Int.nth(2).minor().modEnh(12)
     assert Int.sharp.modEnh(12, 7) == Int.nth(2).minor().modEnh(12, 7)
     assert Int.sharp.modEnh(19, 11) == Int.nth(2).diminished().modEnh(19, 11)
-    # TODO
-    # assert Int.sharp.modEnh(19) == Int.nth(2).diminished().modEnh(19)
-    with pytest.raises(AssertionError):
+    assert Int.sharp.modEnh(19) == Int.nth(2).diminished().modEnh(19)
+    with pytest.raises(AssertionError, match=re.escape("expected exactly one option for fifthSteps, instead of set()")):
+        Int.sharp.modEnh(11)
+    with pytest.raises(AssertionError, match=re.escape("expected exactly one option for fifthSteps, instead of {27, 28}")):
         Int.sharp.modEnh(47)
     assert (Int.nth(2).minor()*8).modEnh(47, 28) == Int.sharp.modEnh(47, 28)
     assert Int.nth(2).minor().modEnh(47, 27) == (Int.sharp*6).modEnh(47, 27)

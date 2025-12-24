@@ -8,6 +8,7 @@ to do some music theory.
 from typing import ClassVar, TypeVar, Any, Optional
 from typing_extensions import Self
 
+from itertools import count
 
 class Int:
     """
@@ -120,14 +121,30 @@ class Int:
 
     def modEnh(self, octaveSteps: int = 12, fifthSteps: Optional[int] = None) -> Self:
         """This interval modulo enharmonic in 12-tone scale,
-        or any other given scale.
+        making e.g. C# equal to Db, or any other given scale.
+        Note that `fifthSteps` defaults to the unique 4a+3b for which octaveSteps=7a+5b;
+        so for the default octaveSteps=12, fifthSteps=7.
+
+        So with default alguments, for the resulting intervals
+        an octave consists of 12 steps, and a fifth of 7 steps.
+
         Note that with default arguments,
         ```
         assert i.modEnh() == i.modInterval(Int.pythagorean_comma)
-        ```"""
+        ```
+        """
         if fifthSteps is None:
-            assert octaveSteps == 12, "TODO: Calculate fifthSteps, but fail if ambiguous, e.g. for 47"
-            fifthSteps = 7
+            # fifthSteps = the unique 4*a+3*b for which octaveSteps==7*a+5*b
+            b0 = (3*octaveSteps) % 7
+            options = set()
+            for k in count(0):
+                b = b0 + 7*k
+                a = (octaveSteps - 5*b) // 7
+                if a < 0: break
+                assert octaveSteps == 7*a + 5*b
+                options.add(4*a + 3*b)
+            assert len(options) == 1, f'expected exactly one option for fifthSteps, instead of {options}'
+            [fifthSteps] = options
         return self.modInterval(type(self)(min2=4*octaveSteps-7*fifthSteps, aug1=3*octaveSteps-5*fifthSteps))
 
     def modAcc(self) -> Self:
