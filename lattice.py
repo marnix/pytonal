@@ -4,24 +4,12 @@ from typing import Iterable, List, Tuple
 Vector = Tuple[int, int]
 
 
-def extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
-    """Return g, p, q with g >= 0 and p*a + q*b == g."""
-    old_r, r = abs(a), abs(b)
-    old_p, p = 1, 0
-    old_q, q = 0, 1
-
-    while r:
-        k = old_r // r
-        old_r, r = r, old_r - k * r
-        old_p, p = p, old_p - k * p
-        old_q, q = q, old_q - k * q
-
-    if a < 0:
-        old_p = -old_p
-    if b < 0:
-        old_q = -old_q
-
-    return old_r, old_p, old_q
+def gcd_euclid(a: int, b: int) -> Tuple[int, int, int]:
+    """Return g, p, q with g >= 0 and p*a + q*b == g, by the Euclidean algorithm."""
+    if b == 0:
+        return abs(a), (1 if a >= 0 else -1), 0
+    g, p, q = gcd_euclid(b, a % b)
+    return g, q, p - (a // b) * q
 
 
 def hnf_2d(vectors: Iterable[Vector]) -> List[Vector]:
@@ -31,7 +19,7 @@ def hnf_2d(vectors: Iterable[Vector]) -> List[Vector]:
     # Find a lattice vector (g, y) where g is the gcd of all x-coordinates.
     g = y = 0
     for x, yy in vectors:
-        new_g, p, q = extended_gcd(g, x)
+        new_g, p, q = gcd_euclid(g, x)
         y = p * y + q * yy
         g = new_g
 
@@ -98,7 +86,7 @@ def in_span_2d(w: Vector, basis: Iterable[Vector]) -> bool:
         a, b = vecs[0][0], vecs[j][0]
         if b == 0:
             continue
-        g, p, q = extended_gcd(a, b)
+        g, p, q = gcd_euclid(a, b)
         u, v = vecs[0], vecs[j]
         vecs[0] = (p * u[0] + q * v[0], p * u[1] + q * v[1])
         vecs[j] = ((b // g) * u[0] - (a // g) * v[0],

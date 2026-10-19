@@ -13,7 +13,7 @@ import pytest
 from hypothesis import given, settings, strategies as st
 from hypothesis.strategies import DrawFn
 
-from lattice import extended_gcd, hnf_2d, in_span_2d, canonical_rep_2d
+from lattice import gcd_euclid, hnf_2d, in_span_2d, canonical_rep_2d
 
 Vector = Tuple[int, int]
 
@@ -71,12 +71,12 @@ def in_span(w: Vector, vs: Sequence[Vector]) -> bool:
     # unimodular combinations of column 0 with each later column j:
     #   col0 <- p*col0 + q*colj          (x becomes gcd(a, b))
     #   colj <- (b/g)*col0 - (a/g)*colj  (x becomes 0)
-    # where (g, p, q) = extended_gcd(a, b) for a = col0.x, b = colj.x.
+    # where (g, p, q) = gcd_euclid(a, b) for a = col0.x, b = colj.x.
     for j in range(1, len(cols)):
         a, b = cols[0][0], cols[j][0]
         if b == 0:
             continue
-        g, p, q = extended_gcd(a, b)
+        g, p, q = gcd_euclid(a, b)
         u, v = cols[0], cols[j]
         cols[0] = (p * u[0] + q * v[0], p * u[1] + q * v[1])
         cols[j] = ((b // g) * u[0] - (a // g) * v[0],
@@ -161,8 +161,8 @@ def canonical_bases(draw: DrawFn) -> List[Vector]:
     st.integers(min_value=-(10 ** 6), max_value=10 ** 6),
     st.integers(min_value=-(10 ** 6), max_value=10 ** 6),
 )
-def test_extended_gcd_bézout(a: int, b: int) -> None:
-    g, p, q = extended_gcd(a, b)
+def test_gcd_euclid_bézout(a: int, b: int) -> None:
+    g, p, q = gcd_euclid(a, b)
     assert g == gcd(a, b)
     assert g >= 0
     assert p * a + q * b == g
