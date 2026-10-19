@@ -51,44 +51,60 @@ def _minors_gcd(vs: Sequence[Vector]) -> int:
 def in_span(w: Vector, vs: Sequence[Vector]) -> bool:
     """Is w an integer linear combination of the arbitrary vectors `vs`?
 
-    Independent of `hnf_2d` on purpose: it reduces `vs` to the triangular
-    basis (g, y), (0, h) of their span via gcd elimination, then tests `w`
-    by reducing it against that basis. This is the oracle used to state the
-    span-preservation property without circularity.
+    This is an independent ORACLE for the implicit lattice L = span(vs): it
+    is written as an integer column-elimination solver that directly attempts
+    to decide whether the target w is reachable, rather than calling hnf_2d
+    or reusing its canonical (g, y), (0, h) row-HNF. Concretely it reduces
+    the columns of the 2 x n matrix [v1 | ... | vn] by unimodular integer
+    column operations (Euclid-style, as in Smith reduction), which preserves
+    the column lattice, and then reads off reachability of w from the reduced
+    generators. Sharing the gcd-combination primitive is unavoidable in Z^2,
+    but the code path and the membership decision are different from hnf_2d's.
     """
-    # Combine all vectors to get one with x-coordinate g = gcd of the x's,
-    # and some corresponding y.
-    g = y = 0
-    for x, yy in vs:
-        g, p, q = extended_gcd(g, x)
-        y = p * y + q * yy
+    if not vs:
+        return w == (0, 0)
 
-    if g == 0:
-        # No vector has a nonzero x: the span is vertical (or zero).
+    cols = [(x, y) for x, y in vs]
+
+    # Euclid-reduce the x-row to a single nonzero entry d1 at column 0, by
+    # unimodular combinations of column 0 with each later column j:
+    #   col0 <- p*col0 + q*colj          (x becomes gcd(a, b))
+    #   colj <- (b/g)*col0 - (a/g)*colj  (x becomes 0)
+    # where (g, p, q) = extended_gcd(a, b) for a = col0.x, b = colj.x.
+    for j in range(1, len(cols)):
+        a, b = cols[0][0], cols[j][0]
+        if b == 0:
+            continue
+        g, p, q = extended_gcd(a, b)
+        u, v = cols[0], cols[j]
+        cols[0] = (p * u[0] + q * v[0], p * u[1] + q * v[1])
+        cols[j] = ((b // g) * u[0] - (a // g) * v[0],
+                   (b // g) * u[1] - (a // g) * v[1])
+
+    d1 = cols[0][0]
+    wx, wy = w
+
+    if d1 == 0:
+        # All x-coordinates vanished: the lattice is vertical or zero.
         h = 0
-        for _, yy in vs:
+        for _, yy in cols:
             h = gcd(h, yy)
         if h == 0:
-            return w == (0, 0)
-        wx, wy = w
+            return wx == 0 and wy == 0
         return wx == 0 and wy % h == 0
 
-    # Reduce every input against (g, y): the remainders are vertical, and the
-    # gcd of their y-coordinates is the vertical step h. If h is zero the
-    # span has rank one.
+    # Vertical remainder of the lattice from the x-free columns.
     h = 0
-    for x, yy in vs:
-        h = gcd(h, yy - (x // g) * y)
+    for _, yy in cols[1:]:
+        h = gcd(h, yy)
 
-    wx, wy = w
-    if h == 0:
-        if wx % g != 0:
-            return False
-        return (wx // g) * y == wy
-
-    if wx % g != 0:
+    # Reduce w against the generator (d1, y0) and then the vertical step h.
+    if wx % d1 != 0:
         return False
-    return (wy - (wx // g) * y) % h == 0
+    rest = wy - (wx // d1) * cols[0][1]
+    if h == 0:
+        return rest == 0
+    return rest % h == 0
 
 
 def _in_span(w: Vector, basis: Sequence[Vector]) -> bool:
