@@ -10,15 +10,51 @@ from typing_extensions import Self
 
 from itertools import count
 
+from lattice import extended_gcd
+
+
+def _canonical(min2: int, aug1: int, modMin2: int, modAug1: int) -> tuple[int, int]:
+    """A canonical representative of (min2,aug1) modulo ℤ·(modMin2,modAug1).
+
+    Subtracts the multiple k*(modMin2,modAug1) whose parallel component is
+    closest to zero, so that all members of the same coset map to the same
+    representative. Requires (modMin2,modAug1) != (0,0).
+    """
+    k = (min2 * modMin2 + aug1 * modAug1) // (modMin2 * modMin2 + modAug1 * modAug1)
+    return (min2 - k * modMin2, aug1 - k * modAug1)
+
+
+def _is_multiple(w: tuple[int, int], v: tuple[int, int]) -> bool:
+    """Is the 2-vector `w` an integer multiple of the nonzero 2-vector `v`?
+
+    Equivalently: does w lie in the integer span of the single vector v?
+    """
+    g, _, _ = extended_gcd(v[0], v[1])
+    # v = g*(vx, vy) with (vx, vy) primitive, so multiples of v are
+    # exactly g*(multiples of (vx, vy)), i.e. multiples of the primitive
+    # direction whose coefficient k satisfies g | k.
+    vx, vy = v[0] // g, v[1] // g
+    if vx != 0:
+        if w[0] % vx != 0:
+            return False
+        k = w[0] // vx
+        return k * vy == w[1] and k % g == 0
+    # vx == 0: v is vertical, primitive means vy == ±1, and multiples of v
+    # are the y-values that are multiples of g.
+    return w[0] == 0 and w[1] % g == 0
+
+
 class Int:
     """
     A (Western) musical interval, uniquely represented by
     the number of minor seconds (e.g., B to C) and
     the number of augmented firsts (sharps, e.g. B to B#);
     optionally modulo another interval, to make
-    e.g. the octave equal to the unison (so C to G = G to C),
+    e.g. the octave equal to the unison (so any interval equals
+    itself plus or minus any number of octaves),
     or C to C# equal to C to Db (12-tone enharmonics),
-    or Cb, C, and C# all equal to each other (a 7-tone scale).
+    or Cb, C, and C# all equal to each other (all intervals that
+    differ only by sharps/flats).
     """
 
     def __init__(self, *, min2: int, aug1: int, modMin2: int = 0, modAug1: int = 0) -> None:
@@ -32,19 +68,23 @@ class Int:
         if isinstance(other, type(self)):
             if not (self.modMin2 == other.modMin2 and self.modAug1 == other.modAug1):
                 return NotImplemented # TODO: Support this case, somehow?
-            # is the difference between my (min2,aug1) and the other's
-            # a multiple of (modMin2,modAug1)?
+            # Is the difference between my (min2,aug1) and the other's an
+            # integer multiple of (modMin2,modAug1)?
+            dm = self.min2 - other.min2
+            da = self.aug1 - other.aug1
             if self.modMin2 == 0 and self.modAug1 == 0:
-                # special case: is my (min2,aug1) equal to the other's?
-                return self.min2 - other.min2 == 0 and \
-                    self.aug1 - other.aug1 == 0
-            else:
-                return (self.min2 - other.min2) * self.modAug1 == \
-                    (self.aug1 - other.aug1) * self.modMin2
+                # special case: no modulus, so the vectors must match exactly.
+                return dm == 0 and da == 0
+            return _is_multiple((dm, da), (self.modMin2, self.modAug1))
         return NotImplemented
 
     def __add__(self, other: Self) -> Self:
-        return type(self)(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1)
+        # Adding only makes sense between intervals modulo the same lattice
+        # (here: the same single (modMin2, modAug1) direction).
+        assert self.modMin2 == other.modMin2 and self.modAug1 == other.modAug1, \
+            f"adding {self!r} and {other!r} with different mod spans"
+        return type(self)(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1,
+                          modMin2=self.modMin2, modAug1=self.modAug1)
 
     def __sub__(self, other: Self) -> Self:
         return self + (-other)
@@ -54,9 +94,21 @@ class Int:
 
     def __mul__(self, other: Any) -> Self:
         assert other % 1 == 0, f"{other} must be integer"
-        return type(self)(min2=other*self.min2, aug1=other*self.aug1)
+        # Scaling by an integer keeps the same mod lattice: scaling a
+        # generator scales the whole span, and vice versa.
+        return type(self)(min2=other*self.min2, aug1=other*self.aug1,
+                          modMin2=self.modMin2, modAug1=self.modAug1)
 
     __rmul__ = __mul__
+
+    def __hash__(self) -> int:
+        # Equal intervals (i.e. same coset of the modulus) must hash equally,
+        # so hash a canonical representative of that coset.
+        if self.modMin2 == 0 and self.modAug1 == 0:
+            rep = (self.min2, self.aug1)
+        else:
+            rep = _canonical(self.min2, self.aug1, self.modMin2, self.modAug1)
+        return hash((rep, self.modMin2, self.modAug1))
 
     def __repr__(self) -> str:
         if self.modMin2 == 0 and self.modAug1 == 0:
