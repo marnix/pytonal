@@ -237,6 +237,17 @@ def test_docstring_enharmonics() -> None:
     assert Int.nth(3).modEnh() != Int.nth(3).minor().modEnh()
 
 
+def test_modEnh_default_is_pythagorean_comma() -> None:
+    # With default arguments, modEnh() mods by the Pythagorean comma
+    # (12 fifths - 7 octaves), as documented.
+    i = Int.fifth.modEnh()
+    assert i == Int.fifth.modInterval(Int.pythagorean_comma)
+    assert i.modBasis == Int.unison.modInterval(Int.pythagorean_comma).modBasis
+    # and that lattice is exactly the span of the comma.
+    assert i.modBasis == hnf_2d([(Int.pythagorean_comma.min2,
+                                  Int.pythagorean_comma.aug1)])
+
+
 def test_docstring_accidentals() -> None:
     # modAcc makes intervals that differ only by sharps/flats equal, so
     # Cb, C, and C# collapse.
