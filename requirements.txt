@@ -6,3 +6,6 @@ mypy ==1.18.2
 
 # for unit tests
 pytest ==8.4.2
+
+# for property-based tests
+hypothesis ==6.170.2
