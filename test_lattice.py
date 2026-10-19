@@ -12,7 +12,7 @@ import pytest
 from hypothesis import given, settings, strategies as st
 from hypothesis.strategies import DrawFn
 
-from lattice import extended_gcd, hnf_2d
+from lattice import extended_gcd, hnf_2d, in_span_2d, canonical_rep_2d
 
 Vector = Tuple[int, int]
 
@@ -298,7 +298,50 @@ def test_hnf_returns_at_most_two_vectors(vs: List[Vector]) -> None:
     assert len(hnf_2d(vs)) <= 2
 
 
+# --- in_span_2d and canonical_rep_2d -----------------------------------------
+
+@given(vectors, vectors)
+def test_in_span_2d_matches_input_span(vs: List[Vector], ws: List[Vector]) -> None:
+    """in_span_2d agrees with hnf_2d's span, on both members and non-members."""
+    for w in ws:
+        assert in_span_2d(w, vs) == in_span(w, hnf_2d(vs))
+
+
+@given(vectors, st.tuples(st.integers(min_value=-90, max_value=90),
+                          st.integers(min_value=-90, max_value=90)))
+def test_in_span_2d_includes_combinations(vs: List[Vector], w: Vector) -> None:
+    """Any combination of the basis is reported as in span."""
+    total = (0, 0)
+    for v in vs:
+        total = (total[0] + w[0] * v[0], total[1] + w[0] * v[1])
+    assert in_span_2d(total, vs)
+
+
+@given(vectors, vectors)
+def test_canonical_rep_2d_consistent_with_in_span(vs: List[Vector],
+                                                  ws: List[Vector]) -> None:
+    """Equal representatives iff the difference is in the span."""
+    for w in ws:
+        same_rep = canonical_rep_2d(w, vs) == canonical_rep_2d((0, 0), vs)
+        assert same_rep == in_span_2d(w, vs)
+
+
+@given(vectors, st.lists(st.integers(min_value=-3, max_value=3), max_size=4))
+def test_canonical_rep_2d_is_coset_invariant(vs: List[Vector], coeffs: List[int]) -> None:
+    """Shifting by a span element does not change the representative."""
+    shift = (0, 0)
+    for c, v in zip(coeffs, vs):
+        shift = (shift[0] + c * v[0], shift[1] + c * v[1])
+    w = canonical_rep_2d((0, 0), vs)
+    w_shifted = canonical_rep_2d(shift, vs)
+    assert w == w_shifted
+
+
 if __name__ == '__main__':
     import sys
+    import pytest
 
-    sys.exit(pytest.main([__file__, '-v', '-rP']))
+    # hypothesis is already imported above (for its decorators), so pytest's
+    # assertion-rewrite warning about it is expected and harmless.
+    sys.exit(pytest.main([__file__, '-v', '-rP',
+                          '-W', 'ignore::pytest.PytestAssertRewriteWarning']))

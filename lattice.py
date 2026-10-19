@@ -55,3 +55,73 @@ def hnf_2d(vectors: Iterable[Vector]) -> List[Vector]:
     # Rank two: reduce y modulo h to obtain canonical row-HNF.
     h = d // g
     return [(g, y % h), (0, h)]
+
+
+def canonical_rep_2d(w: Vector, basis: Iterable[Vector]) -> Vector:
+    """A canonical representative of the coset w + span(basis).
+
+    Two vectors have the same representative iff they differ by an element of
+    the integer span of `basis`. Useful for hashing cosets.
+    """
+    h = hnf_2d(basis)
+    x, y = w[0], w[1]
+    if not h:
+        return (x, y)
+    if len(h) == 1:
+        g, gy = h[0]
+        if g == 0:
+            # vertical generator (0, gy); only x == 0 is representable, but
+            # for hashing we simply reduce y modulo gy.
+            return (x, y % gy)
+        x = x % g
+        y = y - ((w[0] - x) // g) * gy
+        return (x, y)
+    (g, gy), (_, hy) = h
+    x = x % g
+    y = (y - ((w[0] - x) // g) * gy) % hy
+    return (x, y)
+
+
+def in_span_2d(w: Vector, basis: Iterable[Vector]) -> bool:
+    """Is the vector `w` in the integer span of the vectors `basis`?
+
+    Works for an arbitrary basis; internally it reduces the basis by
+    Euclid-style unimodular column operations and then decides reachability
+    of `w`.
+    """
+    vecs = [(v[0], v[1]) for v in basis]
+    if not vecs:
+        return w == (0, 0)
+
+    # Euclid-reduce the x-row to a single nonzero entry d1 at column 0.
+    for j in range(1, len(vecs)):
+        a, b = vecs[0][0], vecs[j][0]
+        if b == 0:
+            continue
+        g, p, q = extended_gcd(a, b)
+        u, v = vecs[0], vecs[j]
+        vecs[0] = (p * u[0] + q * v[0], p * u[1] + q * v[1])
+        vecs[j] = ((b // g) * u[0] - (a // g) * v[0],
+                   (b // g) * u[1] - (a // g) * v[1])
+
+    d1 = vecs[0][0]
+    wx, wy = w
+
+    if d1 == 0:
+        h = 0
+        for _, yy in vecs:
+            h = gcd(h, yy)
+        if h == 0:
+            return wx == 0 and wy == 0
+        return wx == 0 and wy % h == 0
+
+    h = 0
+    for _, yy in vecs[1:]:
+        h = gcd(h, yy)
+
+    if wx % d1 != 0:
+        return False
+    rest = wy - (wx // d1) * vecs[0][1]
+    if h == 0:
+        return rest == 0
+    return rest % h == 0

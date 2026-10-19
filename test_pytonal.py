@@ -4,6 +4,7 @@ from pytonal import *
 import pytest
 
 import re
+from typing import List, Tuple
 
 
 def test_interval_addition_subtraction() -> None:
@@ -123,7 +124,7 @@ def test_modAcc() -> None:
 
 
 def test_repr() -> None:
-    assert repr(Int.sharp.mod8()) == 'pytonal.Int(min2=0, aug1=1, modMin2=7, modAug1=5)'
+    assert repr(Int.sharp.mod8()) == 'pytonal.Int(min2=0, aug1=1, modBasis=[(7, 5)])'
 
 
 # --- property-based tests (hypothesis) ---------------------------------------
@@ -131,43 +132,22 @@ def test_repr() -> None:
 from hypothesis import given, settings, strategies as st
 from hypothesis.strategies import DrawFn
 
+from lattice import in_span_2d, hnf_2d
+
 
 settings.register_profile("pytonal", deadline=None)
 settings.load_profile("pytonal")
 
 _coords = st.integers(min_value=-30, max_value=30)
 
-# an interval, optionally modulo a nonzero single direction
-_intervals = st.builds(
-    Int,
-    min2=_coords,
-    aug1=_coords,
-    modMin2=_coords,
-    modAug1=_coords,
-)
+_raw_basis = st.lists(st.tuples(_coords, _coords), max_size=3)
 
 
 @st.composite
 def _modded_intervals(draw: DrawFn) -> Int:
-    """An interval together with a nonzero modulus (modMin2, modAug1)."""
-    modMin2 = draw(_coords)
-    modAug1 = draw(_coords)
-    if modMin2 == 0 and modAug1 == 0:
-        modMin2 = 1
+    """An interval together with a canonical mod basis."""
     return Int(min2=draw(_coords), aug1=draw(_coords),
-               modMin2=modMin2, modAug1=modAug1)
-
-
-def test_is_multiple_matches_brute_force() -> None:
-    # w is a multiple of v iff w == k*v for some integer k.
-    from pytonal import _is_multiple
-    for v in [(2, 0), (0, 3), (2, 4), (-2, 1), (0, 1), (1, -1)]:
-        for k in range(-8, 9):
-            assert _is_multiple((k * v[0], k * v[1]), v)
-        # non-multiples: (1,0) vs (2,0), (0,1) vs (0,2), etc.
-        for w in [(1, 0), (0, 1), (1, 1), (3, 2), (-1, 2)]:
-            ok = any((w[0], w[1]) == (k * v[0], k * v[1]) for k in range(-40, 41))
-            assert _is_multiple(w, v) == ok, (w, v)
+               modBasis=draw(_raw_basis))
 
 
 @given(_modded_intervals())
@@ -175,74 +155,68 @@ def test_eq_reflexive(i: Int) -> None:
     assert i == i
 
 
-@given(_modded_intervals(), _coords, _coords)
-def test_eq_is_multiple_of_modulus(i: Int, k: int, dm: int) -> None:
-    # shifting by k times the modulus must not change equality
-    j = Int(min2=i.min2 + k * i.modMin2, aug1=i.aug1 + k * i.modAug1,
-            modMin2=i.modMin2, modAug1=i.modAug1)
+@given(_modded_intervals(), st.lists(_coords, max_size=3))
+def test_eq_is_span_membership(i: Int, coeffs: List[int]) -> None:
+    # shifting by any combination of the mod basis must not change equality
+    dm = sum(c * v[0] for c, v in zip(coeffs, i.modBasis))
+    da = sum(c * v[1] for c, v in zip(coeffs, i.modBasis))
+    j = Int(min2=i.min2 + dm, aug1=i.aug1 + da, modBasis=i.modBasis)
     assert i == j
 
 
 @given(_modded_intervals(), _coords, _coords)
-def test_eq_ignores_non_multiple_difference(i: Int, dm: int, da: int) -> None:
-    # a difference that is not a multiple of the modulus must break equality
-    j = Int(min2=i.min2 + dm, aug1=i.aug1 + da,
-            modMin2=i.modMin2, modAug1=i.modAug1)
-    from pytonal import _is_multiple
-    is_mult = _is_multiple((dm, da), (i.modMin2, i.modAug1))
-    assert (i == j) == is_mult
+def test_eq_iff_in_span(i: Int, dm: int, da: int) -> None:
+    j = Int(min2=i.min2 + dm, aug1=i.aug1 + da, modBasis=i.modBasis)
+    assert (i == j) == in_span_2d((dm, da), i.modBasis)
 
 
 @given(_modded_intervals(), _modded_intervals())
 def test_hash_consistent_with_eq(i: Int, j: Int) -> None:
     # whenever two intervals are equal, their hashes must match
-    if (i.modMin2, i.modAug1) != (j.modMin2, j.modAug1):
-        return  # different moduli are never equal
+    if i.modBasis != j.modBasis:
+        return  # different mod bases are never equal
     if i == j:
         assert hash(i) == hash(j)
 
 
 @given(_modded_intervals(), _coords, _coords)
-def test_add_preserves_mod_span(i: Int, dm: int, da: int) -> None:
-    j = Int(min2=dm, aug1=da, modMin2=i.modMin2, modAug1=i.modAug1)
+def test_add_preserves_mod_basis(i: Int, dm: int, da: int) -> None:
+    j = Int(min2=dm, aug1=da, modBasis=i.modBasis)
     k = i + j
-    assert (k.modMin2, k.modAug1) == (i.modMin2, i.modAug1)
+    assert k.modBasis == i.modBasis
     assert (k.min2, k.aug1) == (i.min2 + dm, i.aug1 + da)
 
 
-@given(_modded_intervals(), st.integers(min_value=-5, max_value=5),
-       st.integers(min_value=-5, max_value=5))
-def test_add_asserts_on_different_mod_spans(i: Int, om: int, oa: int) -> None:
-    other = Int(min2=0, aug1=0, modMin2=om, modAug1=oa)
-    if (om, oa) == (i.modMin2, i.modAug1):
-        assert (i + other).modMin2 == i.modMin2
+@given(_modded_intervals(), st.lists(st.tuples(_coords, _coords), max_size=3))
+def test_add_asserts_on_different_mod_spans(i: Int, other_basis: List[Tuple[int, int]]) -> None:
+    other = Int(min2=0, aug1=0, modBasis=other_basis)
+    if other.modBasis == i.modBasis:
+        assert (i + other).modBasis == i.modBasis
     else:
         with pytest.raises(AssertionError):
             i + other
 
 
 @given(_modded_intervals(), st.integers(min_value=-100, max_value=100))
-def test_mul_and_neg_preserve_mod_span(i: Int, k: int) -> None:
-    assert (k * i).modMin2 == i.modMin2
-    assert (k * i).modAug1 == i.modAug1
-    assert (-i).modMin2 == i.modMin2
-    assert (-i).modAug1 == i.modAug1
+def test_mul_and_neg_preserve_mod_basis(i: Int, k: int) -> None:
+    assert (k * i).modBasis == i.modBasis
+    assert (-i).modBasis == i.modBasis
 
 
 @given(_modded_intervals(), st.integers(min_value=-100, max_value=100))
-def test_sub_preserves_mod_span(i: Int, k: int) -> None:
-    j = Int(min2=k, aug1=k, modMin2=i.modMin2, modAug1=i.modAug1)
+def test_sub_preserves_mod_basis(i: Int, k: int) -> None:
+    j = Int(min2=k, aug1=k, modBasis=i.modBasis)
     d = i - j
-    assert (d.modMin2, d.modAug1) == (i.modMin2, i.modAug1)
+    assert d.modBasis == i.modBasis
 
 
-def test_mod_vectors_are_not_collinear_only() -> None:
+def test_non_primitive_modulus_equates_only_multiples() -> None:
     # A non-primitive modulus must NOT equate a non-multiple difference,
     # which a bare collinearity (cross-product) test got wrong.
-    a = Int(min2=0, aug1=0, modMin2=2, modAug1=0)
-    b = Int(min2=1, aug1=0, modMin2=2, modAug1=0)
+    a = Int(min2=0, aug1=0, modBasis=[(2, 0)])
+    b = Int(min2=1, aug1=0, modBasis=[(2, 0)])
     assert a != b
-    c = Int(min2=2, aug1=0, modMin2=2, modAug1=0)
+    c = Int(min2=2, aug1=0, modBasis=[(2, 0)])
     assert a == c
 
 
@@ -272,17 +246,35 @@ def test_docstring_accidentals() -> None:
     assert Int.unison.modAcc() != Int.nth(2).modAcc()
 
 
-def test_modInterval_assert_showcase() -> None:
-    # This documents the restriction that modInterval() may only be applied
-    # to an as-yet-unmodded interval; this assert will be removed when the
-    # modulus becomes a list (mod basis).
-    assert Int.unison.mod8().modAug1 == 5
-    with pytest.raises(AssertionError, match="TODO: lift this restriction"):
-        Int.unison.mod8().modEnh()
+def test_modInterval_accumulates_basis() -> None:
+    # modInterval now accumulates: the mod basis grows into a canonical
+    # lattice, and repeated mods compose regardless of order.
+    i = Int.unison.mod8().modEnh()
+    assert i.modBasis == hnf_2d([(7, 5), (Int.pythagorean_comma.min2,
+                                           Int.pythagorean_comma.aug1)])
+    # order independence
+    assert Int.unison.mod8().modEnh() == Int.unison.modEnh().mod8()
+
+
+def test_mod8_modEnh_canonical_use_case() -> None:
+    # The canonical case: under mod8().modEnh(), B# equals C, and the octave
+    # (and its multiples) also equals C, but the other simple named intervals
+    # stay distinct (i.e. nothing else collapses into the unison).
+    M = Int.unison.mod8().modEnh()
+    Bsharp = Int.nth(7).augmented().mod8().modEnh()
+    assert Bsharp == M
+    # the octave is also equal to the unison (that is what mod8 does)
+    assert Int.octave.mod8().modEnh() == M
+    # but genuinely different pitch classes stay distinct
+    for iv in (Int.sharp, Int.nth(2), Int.nth(3), Int.fifth):
+        assert iv.mod8().modEnh() != M, iv
 
 
 if __name__ == '__main__':
     import sys
     import pytest
 
-    sys.exit(pytest.main([__file__, '-v', '-rP']))
+    # hypothesis is already imported above (for its decorators), so pytest's
+    # assertion-rewrite warning about it is expected and harmless.
+    sys.exit(pytest.main([__file__, '-v', '-rP',
+                          '-W', 'ignore::pytest.PytestAssertRewriteWarning']))
