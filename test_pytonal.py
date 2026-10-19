@@ -188,12 +188,12 @@ def test_add_preserves_mod_basis(i: Int, dm: int, da: int) -> None:
 
 
 @given(_modded_intervals(), st.lists(st.tuples(_coords, _coords), max_size=3))
-def test_add_asserts_on_different_mod_spans(i: Int, other_basis: List[Tuple[int, int]]) -> None:
+def test_add_raises_on_different_mod_spans(i: Int, other_basis: List[Tuple[int, int]]) -> None:
     other = Int(min2=0, aug1=0, modBasis=other_basis)
     if other.modBasis == i.modBasis:
         assert (i + other).modBasis == i.modBasis
     else:
-        with pytest.raises(AssertionError):
+        with pytest.raises(TypeError):
             i + other
 
 

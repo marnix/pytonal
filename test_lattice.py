@@ -5,6 +5,7 @@ Property-based tests for lattice.py, using Hypothesis.
 Run like test_pytonal.py, i.e. as ./test_lattice.py or via pytest.
 """
 
+import itertools
 from math import gcd
 from typing import List, Sequence, Tuple
 
@@ -307,14 +308,43 @@ def test_in_span_2d_matches_input_span(vs: List[Vector], ws: List[Vector]) -> No
         assert in_span_2d(w, vs) == in_span(w, hnf_2d(vs))
 
 
-@given(vectors, st.tuples(st.integers(min_value=-90, max_value=90),
-                          st.integers(min_value=-90, max_value=90)))
-def test_in_span_2d_includes_combinations(vs: List[Vector], w: Vector) -> None:
-    """Any combination of the basis is reported as in span."""
+@given(vectors, st.lists(st.integers(min_value=-5, max_value=5), max_size=6))
+def test_in_span_2d_includes_combinations(vs: List[Vector], coeffs: List[int]) -> None:
+    """Any integer combination of the basis is reported as in span."""
     total = (0, 0)
-    for v in vs:
-        total = (total[0] + w[0] * v[0], total[1] + w[0] * v[1])
+    for c, v in zip(coeffs, vs):
+        total = (total[0] + c * v[0], total[1] + c * v[1])
     assert in_span_2d(total, vs)
+
+
+def _brute_in_span(w: Vector, vs: Sequence[Vector], bound: int) -> bool:
+    """Exhaustive-search membership reference, independent of Euclid reduction.
+
+    Searches for integer coefficients in [-bound, bound] with sum(c_i*v_i) == w.
+    For the tiny inputs used below (|coords| <= 3, |w| <= 6, at most two
+    vectors), any existing solution has coefficients of magnitude <= 36, so
+    bound=40 makes this a reliable oracle.
+    """
+    if not vs:
+        return w == (0, 0)
+    ranges = [range(-bound, bound + 1) for _ in vs]
+    for cs in itertools.product(*ranges):
+        total = (sum(c * v[0] for c, v in zip(cs, vs)),
+                 sum(c * v[1] for c, v in zip(cs, vs)))
+        if total == w:
+            return True
+    return False
+
+
+@given(
+    st.lists(st.tuples(st.integers(min_value=-3, max_value=3),
+                       st.integers(min_value=-3, max_value=3)), max_size=2),
+    st.tuples(st.integers(min_value=-6, max_value=6),
+              st.integers(min_value=-6, max_value=6)),
+)
+def test_in_span_2d_matches_brute_force(vs: List[Vector], w: Vector) -> None:
+    """Independent check against exhaustive coefficient search (small inputs)."""
+    assert in_span_2d(w, vs) == _brute_in_span(w, vs, 40)
 
 
 @given(vectors, vectors)

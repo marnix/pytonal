@@ -47,9 +47,11 @@ class Int:
         return NotImplemented
 
     def __add__(self, other: Self) -> Self:
-        # Adding only makes sense between intervals modulo the same lattice.
-        assert self.modBasis == other.modBasis, \
-            f"adding {self!r} and {other!r} with different mod spans"
+        # Adding only makes sense between intervals modulo the same lattice;
+        # otherwise there is no meaningful sum (which raises TypeError, as
+        # Python does when both __add__ and __radd__ return NotImplemented).
+        if self.modBasis != other.modBasis:
+            return NotImplemented
         return type(self)(min2=self.min2 + other.min2, aug1=self.aug1 + other.aug1,
                           modBasis=self.modBasis)
 
